@@ -1,11 +1,9 @@
-FROM buildpack-deps:jessie-curl
+FROM buildpack-deps:sid-curl
 MAINTAINER Manfred Touron <m@42.am> (https://github.com/moul)
 
 # Install deps
 RUN set -x; \
-    echo deb http://emdebian.org/tools/debian/ jessie main > /etc/apt/sources.list.d/emdebian.list \
- && curl -sL http://emdebian.org/tools/debian/emdebian-toolchain-archive.key | apt-key add - \
- && dpkg --add-architecture arm64                      \
+ dpkg --add-architecture arm64                         \
  && dpkg --add-architecture armel                      \
  && dpkg --add-architecture armhf                      \
  && dpkg --add-architecture i386                       \
@@ -38,7 +36,7 @@ RUN set -x; \
         mercurial                                      \
         multistrap                                     \
         patch                                          \
-        python-software-properties                     \
+        python3-software-properties                    \
         software-properties-common                     \
         subversion                                     \
         wget                                           \
@@ -75,12 +73,12 @@ ENV OSXCROSS_REPO="${osxcross_repo}"                   \
 
 RUN mkdir -p "/tmp/osxcross"                                                                                   \
  && cd "/tmp/osxcross"                                                                                         \
- && curl -sLo osxcross.tar.gz "https://codeload.github.com/${OSXCROSS_REPO}/tar.gz/${OSXCROSS_REVISION}"  \
+ && curl -sLo osxcross.tar.gz "https://codeload.github.com/${OSXCROSS_REPO}/tar.gz/${OSXCROSS_REVISION}"       \
  && tar --strip=1 -xzf osxcross.tar.gz                                                                         \
  && rm -f osxcross.tar.gz                                                                                      \
  && curl -sLo tarballs/MacOSX${DARWIN_SDK_VERSION}.sdk.tar.xz                                                  \
-             "${DARWIN_SDK_URL}"                \
- && yes "" | SDK_VERSION="${DARWIN_SDK_VERSION}" OSX_VERSION_MIN="${DARWIN_OSX_VERSION_MIN}" ./build.sh                               \
+             "${DARWIN_SDK_URL}"                                                                               \
+ && yes "" | SDK_VERSION="${DARWIN_SDK_VERSION}" OSX_VERSION_MIN="${DARWIN_OSX_VERSION_MIN}" ./build.sh        \
  && mv target /usr/osxcross                                                                                    \
  && mv tools /usr/osxcross/                                                                                    \
  && ln -sf ../tools/osxcross-macports /usr/osxcross/bin/omp                                                    \
@@ -94,7 +92,7 @@ RUN mkdir -p "/tmp/osxcross"                                                    
 ENV LINUX_TRIPLES=arm-linux-gnueabi,arm-linux-gnueabihf,aarch64-linux-gnu,mipsel-linux-gnu,powerpc64le-linux-gnu                  \
     DARWIN_TRIPLES=x86_64h-apple-darwin${DARWIN_VERSION},x86_64-apple-darwin${DARWIN_VERSION},i386-apple-darwin${DARWIN_VERSION}  \
     WINDOWS_TRIPLES=i686-w64-mingw32,x86_64-w64-mingw32                                                                           \
-    CROSS_TRIPLE=x86_64-linux-gnu
+    CROSS_TRIPLE=lib
 COPY ./assets/osxcross-wrapper /usr/bin/osxcross-wrapper
 RUN for triple in $(echo ${LINUX_TRIPLES} | tr "," " "); do                                       \
       for bin in /etc/alternatives/$triple-* /usr/bin/$triple-*; do                               \
@@ -110,7 +108,7 @@ RUN for triple in $(echo ${LINUX_TRIPLES} | tr "," " "); do                     
       done &&                                                                                     \
       rm -f /usr/$triple/bin/clang*;                                                              \
       ln -s cc /usr/$triple/bin/gcc;                                                              \
-      ln -s /usr/osxcross/SDK/MacOSX${DARWIN_SDK_VERSION}.sdk/usr /usr/x86_64-linux-gnu/$triple;  \
+      ln -s /usr/osxcross/SDK/MacOSX${DARWIN_SDK_VERSION}.sdk/usr /usr/${CROSS_TRIPLE}/$triple;  \
     done;                                                                                         \
     for triple in $(echo ${WINDOWS_TRIPLES} | tr "," " "); do                                     \
       mkdir -p /usr/$triple/bin;                                                                  \
@@ -120,7 +118,7 @@ RUN for triple in $(echo ${LINUX_TRIPLES} | tr "," " "); do                     
         fi;                                                                                       \
       done;                                                                                       \
       ln -s gcc /usr/$triple/bin/cc;                                                              \
-      ln -s /usr/$triple /usr/x86_64-linux-gnu/$triple;                                           \
+      ln -s /usr/$triple /usr/${CROSS_TRIPLE}/$triple;                                           \
     done
 # we need to use default clang binary to avoid a bug in osxcross that recursively call himself
 # with more and more parameters
